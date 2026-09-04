@@ -22,11 +22,18 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install Dependencies & Build Web
         run: |
           npm install
           npm run build
           npx cap sync android
+
+      - name: Make Gradle Executable
+        working-directory: ./android
+        run: chmod +x gradlew
 
       - name: Build Debug APK
         working-directory: ./android
