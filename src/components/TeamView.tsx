@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Users, Plus, Trash2, CheckCircle2, Clock, Copy, Check } from 'lucide-react';
-import type { CrewData, TeamMember } from '@/types';
 import { supabase } from '@/lib/supabase';
 
 interface TeamViewProps {
-  data: CrewData;
-  onUpdate: () => void;
+  data?: any;
+  onUpdate?: () => void;
 }
 
 export function TeamView({ data, onUpdate }: TeamViewProps) {
@@ -34,7 +33,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
           name: name.trim(),
           whatsapp: whatsapp.trim(),
           role: role,
-          team_id: newTeamId, // Unique ID saved to database
+          team_id: newTeamId,
           payment_status: 'Pending',
         },
       ]);
@@ -43,7 +42,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
 
       setName('');
       setWhatsapp('');
-      onUpdate();
+      if (onUpdate) onUpdate();
       alert(`Team member added successfully!\nTeam ID: ${newTeamId}`);
     } catch (err: any) {
       alert(err.message || 'Error adding team member');
@@ -54,27 +53,39 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
 
   const handleDeleteMember = async (id: string) => {
     if (!confirm('Are you sure you want to remove this member?')) return;
-    const { error } = await supabase.from('team').delete().eq('id', id);
-    if (!error) onUpdate();
+    try {
+      const { error } = await supabase.from('team').delete().eq('id', id);
+      if (!error && onUpdate) onUpdate();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const togglePaymentStatus = async (member: TeamMember) => {
+  const togglePaymentStatus = async (member: any) => {
     const newStatus = member.payment_status === 'Paid' ? 'Pending' : 'Paid';
-    const { error } = await supabase
-      .from('team')
-      .update({ payment_status: newStatus })
-      .eq('id', member.id);
-    if (!error) onUpdate();
+    try {
+      const { error } = await supabase
+        .from('team')
+        .update({ payment_status: newStatus })
+        .eq('id', member.id);
+      if (!error && onUpdate) onUpdate();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const copyToClipboard = (teamId: string) => {
+    if (!teamId) return;
     navigator.clipboard.writeText(teamId);
     setCopiedId(teamId);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const teamList = data?.team || [];
+
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 text-white">
+      {/* Add Member Form */}
       <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 shadow-xl">
         <h3 className="text-sm font-bold text-amber-400 mb-3 flex items-center gap-2">
           <Users className="w-4 h-4" /> Add Team Member
@@ -125,18 +136,19 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
         </form>
       </div>
 
+      {/* Team List with IDs */}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white px-1">Team List ({data.team?.length || 0})</h3>
-        {(!data.team || data.team.length === 0) ? (
+        <h3 className="text-sm font-bold text-white px-1">Team List ({teamList.length})</h3>
+        {teamList.length === 0 ? (
           <p className="text-xs text-neutral-500 text-center py-8">No team members added yet.</p>
         ) : (
-          data.team.map((member) => (
-            <div key={member.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-3.5 flex items-center justify-between">
+          teamList.map((member: any) => (
+            <div key={member.id || member.name} className="bg-neutral-900 border border-neutral-800 rounded-xl p-3.5 flex items-center justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h4 className="text-sm font-bold text-white">{member.name}</h4>
                   <span className="text-[10px] bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded-md border border-neutral-700">
-                    {member.role}
+                    {member.role || 'Member'}
                   </span>
                 </div>
                 <p className="text-xs text-neutral-400">{member.whatsapp || 'No WhatsApp'}</p>
@@ -144,18 +156,22 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
                 {/* TEAM ID DISPLAY & COPY BUTTON */}
                 <div className="pt-1 flex items-center gap-2">
                   <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 font-mono font-bold tracking-wider">
-                    ID: {member.team_id || 'CRW-GENERATE'}
+                    ID: {member.team_id || 'Not Assigned'}
                   </span>
                   {member.team_id && (
                     <button
                       onClick={() => copyToClipboard(member.team_id)}
-                      className="text-neutral-400 hover:text-white transition-colors p-1"
+                      className="text-neutral-400 hover:text-white transition-colors p-1 flex items-center gap-1 bg-neutral-800 px-2 py-0.5 rounded"
                       title="Copy Team ID"
                     >
                       {copiedId === member.team_id ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" /> <span className="text-[10px] text-emerald-400">Copied</span>
+                        </>
                       ) : (
-                        <Copy className="w-3.5 h-3.5" />
+                        <>
+                          <Copy className="w-3.5 h-3.5" /> <span className="text-[10px]">Copy ID</span>
+                        </>
                       )}
                     </button>
                   )}
