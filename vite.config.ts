@@ -6,6 +6,9 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
   base: '/TeamManage/',
   plugins: [react()],
+  server: {
+    port: 3000, // Yeh fix karega ki app hamesha localhost:3000 par chale
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
