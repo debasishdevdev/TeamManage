@@ -15,6 +15,7 @@ const emptyForm = {
   client_name: '',
   event_type: '',
   event_date: '',
+  event_dates: [] as { date: string; title: string }[],
   event_time: '',
   location: '',
   budget: 0,
@@ -28,16 +29,33 @@ const emptyForm = {
 export function BookingsManager({ bookings, team, onAddBooking, onUpdateBooking, onDeleteBooking, onAddInstallment }: BookingsManagerProps) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [newEventDate, setNewEventDate] = useState({ date: '', title: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Booking>>({});
   const [paymentInput, setPaymentInput] = useState({ amount: '', date: '' });
   const [activePaymentFor, setActivePaymentFor] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handleAddEventDate = () => {
+    if (!newEventDate.date) return alert('Please select a date!');
+    setForm({
+      ...form,
+      event_dates: [...(form.event_dates || []), { date: newEventDate.date, title: newEventDate.title || 'Event' }],
+      event_date: form.event_date || newEventDate.date, // Fallback main date
+    });
+    setNewEventDate({ date: '', title: '' });
+  };
+
+  const handleRemoveEventDate = (index: number) => {
+    const updated = [...(form.event_dates || [])];
+    updated.splice(index, 1);
+    setForm({ ...form, event_dates: updated });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.client_name.trim()) return alert('Client name is required!');
-    if (!form.event_date) return alert('Event date is required!');
+    if (!form.event_date && (!form.event_dates || form.event_dates.length === 0)) return alert('At least one event date is required!');
     
     try {
       setIsSubmitting(true);
@@ -110,27 +128,58 @@ export function BookingsManager({ bookings, team, onAddBooking, onUpdateBooking,
               className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-400"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-neutral-400 mb-1 block">Event Type</label>
+          <div>
+            <label className="text-[10px] text-neutral-400 mb-1 block">Event Type</label>
+            <input
+              type="text"
+              placeholder="Wedding / Sangeet / Reception"
+              value={form.event_type}
+              onChange={(e) => setForm({ ...form, event_type: e.target.value })}
+              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-400"
+            />
+          </div>
+
+          {/* Multiple Dates Section */}
+          <div className="space-y-2 bg-neutral-950 p-3 rounded-xl border border-neutral-800">
+            <label className="text-[10px] text-amber-400 font-bold block">Event Dates (Multiple Dates Support)</label>
+            
+            <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Wedding"
-                value={form.event_type}
-                onChange={(e) => setForm({ ...form, event_type: e.target.value })}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-400"
+                placeholder="Title (e.g. Haldi)"
+                value={newEventDate.title}
+                onChange={(e) => setNewEventDate({ ...newEventDate, title: e.target.value })}
+                className="w-1/2 bg-neutral-800 border border-neutral-700 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none focus:border-amber-400"
               />
-            </div>
-            <div>
-              <label className="text-[10px] text-neutral-400 mb-1 block">Event Date *</label>
               <input
                 type="date"
-                value={form.event_date}
-                onChange={(e) => setForm({ ...form, event_date: e.target.value })}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-400"
+                value={newEventDate.date}
+                onChange={(e) => setNewEventDate({ ...newEventDate, date: e.target.value })}
+                className="w-1/2 bg-neutral-800 border border-neutral-700 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none focus:border-amber-400"
               />
             </div>
+            <button
+              type="button"
+              onClick={handleAddEventDate}
+              className="w-full bg-neutral-800 hover:bg-neutral-700 text-amber-400 text-xs font-medium py-1.5 rounded-lg border border-neutral-700 transition-colors"
+            >
+              + Add Another Date
+            </button>
+
+            {form.event_dates && form.event_dates.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                {form.event_dates.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center bg-neutral-900 px-2.5 py-1 rounded-lg text-xs text-neutral-300">
+                    <span><strong className="text-amber-400">{item.title}:</strong> {item.date}</span>
+                    <button type="button" onClick={() => handleRemoveEventDate(idx)} className="text-red-400 hover:text-red-300">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[10px] text-neutral-400 mb-1 block">Event Time</label>
@@ -235,12 +284,6 @@ export function BookingsManager({ bookings, team, onAddBooking, onUpdateBooking,
                 className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs"
               />
               <input
-                type="date"
-                value={editForm.event_date || ''}
-                onChange={(e) => setEditForm({ ...editForm, event_date: e.target.value })}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs"
-              />
-              <input
                 type="text"
                 placeholder="Event Type"
                 value={editForm.event_type || ''}
@@ -252,13 +295,6 @@ export function BookingsManager({ bookings, team, onAddBooking, onUpdateBooking,
                 placeholder="Location"
                 value={editForm.location || ''}
                 onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs"
-              />
-              <input
-                type="text"
-                placeholder="Time"
-                value={editForm.event_time || ''}
-                onChange={(e) => setEditForm({ ...editForm, event_time: e.target.value })}
                 className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs"
               />
               <input
@@ -281,8 +317,22 @@ export function BookingsManager({ bookings, team, onAddBooking, onUpdateBooking,
                 <div className="space-y-1.5 flex-1 min-w-0">
                   <p className="font-bold text-white text-sm">{b.client_name}</p>
                   {b.event_type && <span className="inline-block text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/20">{b.event_type}</span>}
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-neutral-500">
-                    {b.event_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {b.event_date}</span>}
+                  
+                  {/* Display Multiple Dates */}
+                  <div className="space-y-1 pt-1">
+                    {b.event_dates && b.event_dates.length > 0 ? (
+                      b.event_dates.map((d, i) => (
+                        <div key={i} className="flex items-center gap-1 text-[10px] text-neutral-300 bg-neutral-800/60 px-2 py-0.5 rounded">
+                          <Calendar className="w-3 h-3 text-amber-400" />
+                          <span className="font-semibold text-amber-400">{d.title}:</span> {d.date}
+                        </div>
+                      ))
+                    ) : (
+                      b.event_date && <span className="flex items-center gap-1 text-[10px] text-neutral-400"><Calendar className="w-3 h-3" /> {b.event_date}</span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-neutral-500 pt-1">
                     {b.event_time && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {b.event_time}</span>}
                     {b.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {b.location}</span>}
                   </div>
