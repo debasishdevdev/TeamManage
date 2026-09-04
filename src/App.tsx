@@ -11,39 +11,53 @@ const SESSION_KEY = 'crewbook_session';
 function App() {
   const [step, setStep] = useState<AppStep>('splash');
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const checkAuthAndSession = async () => {
-      // 1. Pehle Supabase session check karo (Google OAuth return hone par yahi milega)
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        const metadata = session.user.user_metadata;
-        const loggedInUser: CurrentUser = {
-          name: metadata?.name || session.user.email?.split('@')[0] || 'User',
-          role: metadata?.role || 'owner',
-          whatsapp: metadata?.whatsapp || '',
-        };
+      try {
+        // 1. Pehle Supabase session check karo
+        const { data: { session } } = await supabase.auth.getSession();
         
-        setUser(loggedInUser);
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(loggedInUser));
-        
-        // Agar profile complete hai toh seedha dashboard bhejo
-        if (metadata?.whatsapp && metadata?.name) {
-          setStep(loggedInUser.role === 'owner' ? 'owner_dash' : 'member_dash');
-          return;
+        if (session?.user) {
+          const metadata = session.user.user_metadata;
+          const loggedInUser: CurrentUser = {
+            name: metadata?.name || session.user.email?.split('@')[0] || 'User',
+            role: metadata?.role || 'owner',
+            whatsapp: metadata?.whatsapp || '',
+          };
+          
+          setUser(loggedInUser);
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(loggedInUser));
+          
+          if (metadata?.whatsapp && metadata?.name) {
+            setStep(loggedInUser.role === 'owner' ? 'owner_dash' : 'member_dash');
+            setLoading(false);
+            return;
+          }
         }
-      }
 
-      // 2. Agar Supabase session nahi hai toh sessionStorage check karo
-      const saved = sessionStorage.getItem(SESSION_KEY);
-      if (saved) {
-        try {
-          const savedUser: CurrentUser = JSON.parse(saved);
-          setUser(savedUser);
-        } catch {
-          sessionStorage.removeItem(SESSION_KEY);
+        // 2. Agar Supabase session nahi hai toh sessionStorage check karo
+        const saved = sessionStorage.getItem(SESSION_KEY);
+        if (saved) {
+          try {
+            const savedUser: CurrentUser = JSON.parse(saved);
+            setUser(savedUser);
+            setStep(savedUser.role === 'owner' ? 'owner_dash' : 'member_dash');
+            setLoading(false);
+            return;
+          } catch {
+            sessionStorage.removeItem(SESSION_KEY);
+          }
         }
+
+        // Agar koi session nahi mila toh login par bhej do
+        setStep('login');
+      } catch (err) {
+        console.error('Auth check error:', err);
+        setStep('login');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -76,13 +90,21 @@ function App() {
     setStep('login');
   };
 
+  // Jab tak session check ho raha hai, tab tak ek loading indicator dikhao taaki white screen na aaye
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#ffffff', color: '#333', fontFamily: 'sans-serif' }}>
+        <h3>Loading TeamManage...</h3>
+      </div>
+    );
+  }
+
   if (step === 'splash') {
     return <Splash onDone={handleSplashDone} />;
   }
 
   if (step === 'login') {
     return <Login onLoginSuccess={(supabaseUser) => {
-      // Login component se success aane par
       const metadata = supabaseUser.user_metadata;
       const loggedInUser: CurrentUser = {
         name: metadata?.name || 'User',
