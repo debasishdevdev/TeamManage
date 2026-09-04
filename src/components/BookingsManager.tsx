@@ -32,14 +32,24 @@ export function BookingsManager({ bookings, team, onAddBooking, onUpdateBooking,
   const [editForm, setEditForm] = useState<Partial<Booking>>({});
   const [paymentInput, setPaymentInput] = useState({ amount: '', date: '' });
   const [activePaymentFor, setActivePaymentFor] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.client_name.trim()) return alert('Client name is required!');
     if (!form.event_date) return alert('Event date is required!');
-    await onAddBooking(form);
-    setForm(emptyForm);
-    setShowForm(false);
+    
+    try {
+      setIsSubmitting(true);
+      await onAddBooking(form);
+      setForm(emptyForm);
+      setShowForm(false);
+    } catch (error: any) {
+      console.error('Error adding booking:', error);
+      alert('Failed to save booking: ' + (error.message || 'Unknown database error'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const startEdit = (b: Booking) => {
@@ -49,16 +59,26 @@ export function BookingsManager({ bookings, team, onAddBooking, onUpdateBooking,
 
   const saveEdit = async () => {
     if (!editingId) return;
-    await onUpdateBooking(editingId, editForm);
-    setEditingId(null);
-    setEditForm({});
+    try {
+      await onUpdateBooking(editingId, editForm);
+      setEditingId(null);
+      setEditForm({});
+    } catch (error: any) {
+      console.error('Error updating booking:', error);
+      alert('Failed to update: ' + (error.message || 'Unknown error'));
+    }
   };
 
   const handleAddInstallment = async (bookingId: string) => {
     if (!paymentInput.amount || !paymentInput.date) return alert('Enter both amount and payment date!');
-    await onAddInstallment(bookingId, { date: paymentInput.date, amount: Number(paymentInput.amount) });
-    setPaymentInput({ amount: '', date: '' });
-    setActivePaymentFor(null);
+    try {
+      await onAddInstallment(bookingId, { date: paymentInput.date, amount: Number(paymentInput.amount) });
+      setPaymentInput({ amount: '', date: '' });
+      setActivePaymentFor(null);
+    } catch (error: any) {
+      console.error('Error adding installment:', error);
+      alert('Failed to add installment: ' + (error.message || 'Unknown error'));
+    }
   };
 
   const toggleTeamMember = (name: string, list: string[], setter: (v: string[]) => void) => {
@@ -188,8 +208,12 @@ export function BookingsManager({ bookings, team, onAddBooking, onUpdateBooking,
               )}
             </div>
           </div>
-          <button type="submit" className="w-full bg-amber-500 text-neutral-950 font-bold p-2.5 rounded-lg text-xs hover:bg-amber-600 transition-colors">
-            Create Booking
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="w-full bg-amber-500 text-neutral-950 font-bold p-2.5 rounded-lg text-xs hover:bg-amber-600 transition-colors disabled:opacity-50"
+          >
+            {isSubmitting ? 'Saving...' : 'Create Booking'}
           </button>
         </form>
       )}
@@ -263,7 +287,7 @@ export function BookingsManager({ bookings, team, onAddBooking, onUpdateBooking,
                     {b.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {b.location}</span>}
                   </div>
                   {b.notes && <p className="text-[10px] text-neutral-500 flex items-start gap-1"><FileText className="w-3 h-3 mt-0.5 shrink-0" /> {b.notes}</p>}
-                  {b.assigned_team.length > 0 && (
+                  {b.assigned_team && b.assigned_team.length > 0 && (
                     <div className="flex items-start gap-1">
                       <Users className="w-3 h-3 text-neutral-500 mt-0.5 shrink-0" />
                       <div className="flex flex-wrap gap-1">
