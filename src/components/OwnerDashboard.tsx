@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarDays, ClipboardList, Users, Wallet, Video, LogOut, Film } from 'lucide-react';
+import { CalendarDays, ClipboardList, Users, Wallet, Video, LogOut } from 'lucide-react';
 import type { AppStep, TabId, CurrentUser } from '@/types';
 import { useCrewBook } from '@/hooks/useCrewBook';
 import { CalendarView } from '@/components/CalendarView';
@@ -32,7 +32,7 @@ export function OwnerDashboard({ user, onLogout, setStep }: OwnerDashboardProps)
       <div className="flex items-center justify-center min-h-screen bg-neutral-950">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-amber-500/10 mb-3 animate-pulse">
-            <Film className="w-6 h-6 text-amber-400" />
+            <Users className="w-6 h-6 text-amber-400" />
           </div>
           <p className="text-xs text-neutral-500">Loading your studio...</p>
         </div>
@@ -50,10 +50,10 @@ export function OwnerDashboard({ user, onLogout, setStep }: OwnerDashboardProps)
       <header className="flex justify-between items-center px-4 py-3.5 bg-neutral-900 border-b border-neutral-800 sticky top-0 z-20">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
-            <Film className="w-5 h-5 text-neutral-950" strokeWidth={2.5} />
+            <Users className="w-5 h-5 text-neutral-950" strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-base font-bold text-amber-400 leading-tight">CrewBook</h1>
+            <h1 className="text-base font-bold text-amber-400 leading-tight">Team Manage</h1>
             <p className="text-[10px] text-neutral-500">Owner Dashboard</p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Film, Crown, Video, Phone, ArrowRight } from 'lucide-react';
+import { Users, Crown, Video, Phone, ArrowRight } from 'lucide-react';
 import type { UserRole } from '@/types';
 
 interface LoginProps {
@@ -21,9 +21,9 @@ export function Login({ onLogin }: LoginProps) {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 mb-4 shadow-xl shadow-amber-500/20">
-            <Film className="w-8 h-8 text-neutral-950" strokeWidth={2.5} />
+            <Users className="w-8 h-8 text-neutral-950" strokeWidth={2.5} />
           </div>
-          <h2 className="text-2xl font-bold text-amber-400">CrewBook</h2>
+          <h2 className="text-2xl font-bold text-amber-400">Team Manage</h2>
           <p className="text-xs text-neutral-500 mt-1">Powered by Darsik Films</p>
         </div>
 
