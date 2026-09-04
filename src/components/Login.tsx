@@ -34,14 +34,14 @@ export function Login({ onLoginSuccess }: LoginProps) {
     checkUserSession();
   }, [onLoginSuccess]);
 
-  // Step 1: Trigger Google Sign-In
+  // Step 1: Trigger Google Sign-In with proper GitHub Pages sub-path redirect
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}/TeamManage/`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
