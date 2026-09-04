@@ -57,6 +57,14 @@ function App() {
     sessionStorage.removeItem(SESSION_KEY);
   };
 
+  // Helper function to trigger WhatsApp from the logged-in user's number
+  const handleOpenWhatsApp = (customMessage = "Hello, managing team tasks.") => {
+    const phone = user?.whatsapp || loginPhone || "";
+    const cleanPhone = phone.replace(/\D/g, '');
+    const text = encodeURIComponent(customMessage);
+    window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+  };
+
   if (step === 'splash') {
     return <Splash onDone={handleSplashDone} />;
   }
