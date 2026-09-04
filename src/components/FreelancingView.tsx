@@ -24,21 +24,32 @@ export function FreelancingView({ freelancing, team, onAdd, onUpdate, onDelete }
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<FreelanceJob>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return alert('Studio/Client name is required!');
     if (!form.date) return alert('Date is required!');
-    await onAdd({
-      date: form.date,
-      name: form.name.trim(),
-      equipment: form.equipment.trim(),
-      paid: Number(form.paid) || 0,
-      unpaid: Number(form.unpaid) || 0,
-      assigned_team: form.assigned_team,
-    });
-    setForm(emptyForm);
-    setShowForm(false);
+    
+    try {
+      setIsSubmitting(true);
+      await onAdd({
+        date: form.date,
+        name: form.name.trim(),
+        equipment: form.equipment.trim(),
+        paid: Number(form.paid) || 0,
+        unpaid: Number(form.unpaid) || 0,
+        assigned_team: form.assigned_team,
+      });
+      setForm(emptyForm);
+      setShowForm(false);
+    } catch (error: any) {
+      console.error('Error adding freelance job:', error);
+      alert('Failed to add freelance job: ' + (error.message || 'Unknown database error'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const startEdit = (f: FreelanceJob) => {
@@ -55,16 +66,24 @@ export function FreelancingView({ freelancing, team, onAdd, onUpdate, onDelete }
 
   const saveEdit = async () => {
     if (!editingId) return;
-    await onUpdate(editingId, {
-      date: editForm.date || null,
-      name: editForm.name || '',
-      equipment: editForm.equipment || '',
-      paid: Number(editForm.paid) || 0,
-      unpaid: Number(editForm.unpaid) || 0,
-      assigned_team: editForm.assigned_team || '',
-    });
-    setEditingId(null);
-    setEditForm({});
+    try {
+      setIsUpdating(true);
+      await onUpdate(editingId, {
+        date: editForm.date || null,
+        name: editForm.name || '',
+        equipment: editForm.equipment || '',
+        paid: Number(editForm.paid) || 0,
+        unpaid: Number(editForm.unpaid) || 0,
+        assigned_team: editForm.assigned_team || '',
+      });
+      setEditingId(null);
+      setEditForm({});
+    } catch (error: any) {
+      console.error('Error updating freelance job:', error);
+      alert('Failed to update: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const sendWhatsApp = (f: FreelanceJob) => {
@@ -152,8 +171,12 @@ export function FreelancingView({ freelancing, team, onAdd, onUpdate, onDelete }
               ))}
             </select>
           </div>
-          <button type="submit" className="w-full bg-amber-500 text-neutral-950 font-bold p-2.5 rounded-lg text-xs hover:bg-amber-600 transition-colors">
-            Add Freelance Work
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="w-full bg-amber-500 text-neutral-950 font-bold p-2.5 rounded-lg text-xs hover:bg-amber-600 transition-colors disabled:opacity-50"
+          >
+            {isSubmitting ? 'Adding...' : 'Add Freelance Work'}
           </button>
         </form>
       )}
@@ -214,8 +237,12 @@ export function FreelancingView({ freelancing, team, onAdd, onUpdate, onDelete }
                 ))}
               </select>
               <div className="flex gap-2">
-                <button onClick={saveEdit} className="bg-emerald-500 text-black px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-1">
-                  <Save className="w-3 h-3" /> Save
+                <button 
+                  onClick={saveEdit} 
+                  disabled={isUpdating}
+                  className="bg-emerald-500 text-black px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-1 disabled:opacity-50"
+                >
+                  <Save className="w-3 h-3" /> {isUpdating ? 'Saving...' : 'Save'}
                 </button>
                 <button onClick={() => setEditingId(null)} className="bg-neutral-700 text-white px-3 py-2 rounded-lg text-xs">Cancel</button>
               </div>
@@ -233,7 +260,15 @@ export function FreelancingView({ freelancing, team, onAdd, onUpdate, onDelete }
                     <Pencil className="w-3 h-3" />
                   </button>
                   <button
-                    onClick={() => { if (confirm('Delete this freelance entry?')) onDelete(f.id); }}
+                    onClick={async () => {
+                      if (confirm('Delete this freelance entry?')) {
+                        try {
+                          await onDelete(f.id);
+                        } catch (error: any) {
+                          alert('Failed to delete: ' + (error.message || 'Unknown error'));
+                        }
+                      }
+                    }}
                     className="text-red-400 bg-red-500/10 px-2 py-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
                   >
                     <Trash2 className="w-3 h-3" />
