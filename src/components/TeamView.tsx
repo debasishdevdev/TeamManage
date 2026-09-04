@@ -26,6 +26,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
     setLoading(true);
 
     const newTeamId = generateTeamId();
+    const ownerEmail = data?.ownerEmail || localStorage.getItem('owner_email') || '';
 
     try {
       const { error } = await supabase.from('team').insert([
@@ -35,6 +36,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
           role: role,
           team_id: newTeamId,
           payment_status: 'Pending',
+          owner_email: ownerEmail,
         },
       ]);
 
@@ -43,7 +45,6 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
       setName('');
       setWhatsapp('');
       if (onUpdate) onUpdate();
-      alert(`Team member added successfully!\nTeam ID: ${newTeamId}`);
     } catch (err: any) {
       alert(err.message || 'Error adding team member');
     } finally {
@@ -131,37 +132,62 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
             disabled={loading}
             className="w-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-2 mt-2"
           >
-            <Plus className="w-4 h-4" /> {loading ? 'Adding...' : 'Generate ID & Add Member'}
+            <Plus className="w-4 h-4" /> {loading ? 'Adding...' : 'Add Team Member'}
           </button>
         </form>
       </div>
 
-      {/* Team List with IDs */}
+      {/* Team List with Permanent Team ID and Status */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white px-1">Team List ({teamList.length})</h3>
         {teamList.length === 0 ? (
           <p className="text-xs text-neutral-500 text-center py-8">No team members added yet.</p>
         ) : (
           teamList.map((member: any) => (
-            <div key={member.id || member.name} className="bg-neutral-900 border border-neutral-800 rounded-xl p-3.5 flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-white">{member.name}</h4>
-                  <span className="text-[10px] bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded-md border border-neutral-700">
-                    {member.role || 'Member'}
-                  </span>
+            <div key={member.id || member.name} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-white">{member.name}</h4>
+                    <span className="text-[10px] bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded-md border border-neutral-700">
+                      {member.role || 'Member'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-400 mt-0.5">{member.whatsapp || 'No WhatsApp'}</p>
                 </div>
-                <p className="text-xs text-neutral-400">{member.whatsapp || 'No WhatsApp'}</p>
-                
-                {/* TEAM ID DISPLAY & COPY BUTTON */}
-                <div className="pt-1 flex items-center gap-2">
-                  <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 font-mono font-bold tracking-wider">
-                    ID: {member.team_id || 'Not Assigned'}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => togglePaymentStatus(member)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+                      member.payment_status === 'Paid'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    }`}
+                  >
+                    {member.payment_status === 'Paid' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                    {member.payment_status || 'Pending'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteMember(member.id)}
+                    className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* PERMANENTLY DISPLAYING TEAM ID & PAYMENT STATUS BELOW */}
+              <div className="pt-2 border-t border-neutral-800 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-neutral-400">Login ID:</span>
+                  <span className="bg-neutral-950 text-amber-400 font-mono font-bold px-2 py-1 rounded border border-amber-500/30">
+                    {member.team_id || 'CRW-GENERATE'}
                   </span>
                   {member.team_id && (
                     <button
                       onClick={() => copyToClipboard(member.team_id)}
-                      className="text-neutral-400 hover:text-white transition-colors p-1 flex items-center gap-1 bg-neutral-800 px-2 py-0.5 rounded"
+                      className="text-neutral-400 hover:text-white transition-colors p-1 flex items-center gap-1 bg-neutral-800 px-2 py-1 rounded"
                       title="Copy Team ID"
                     >
                       {copiedId === member.team_id ? (
@@ -170,32 +196,16 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3.5 h-3.5" /> <span className="text-[10px]">Copy ID</span>
+                          <Copy className="w-3.5 h-3.5" /> <span className="text-[10px]">Copy</span>
                         </>
                       )}
                     </button>
                   )}
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => togglePaymentStatus(member)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
-                    member.payment_status === 'Paid'
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                  }`}
-                >
-                  {member.payment_status === 'Paid' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-                  {member.payment_status || 'Pending'}
-                </button>
-                <button
-                  onClick={() => handleDeleteMember(member.id)}
-                  className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-500/10 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <span className={`text-[11px] font-medium ${member.payment_status === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  This member has {member.payment_status || 'Pending'} payment
+                </span>
               </div>
             </div>
           ))
