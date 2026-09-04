@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import type { AppStep, UserRole, CurrentUser } from '@/types';
 import { Splash } from '@/components/Splash';
 import { Login } from '@/components/Login';
-import { OtpVerify } from '@/components/OtpVerify';
 import { OwnerDashboard } from '@/components/OwnerDashboard';
 import { MemberDashboard } from '@/components/MemberDashboard';
 
@@ -11,8 +10,6 @@ const SESSION_KEY = 'crewbook_session';
 function App() {
   const [step, setStep] = useState<AppStep>('splash');
   const [user, setUser] = useState<CurrentUser | null>(null);
-  const [loginRole, setLoginRole] = useState<UserRole | null>(null);
-  const [loginPhone, setLoginPhone] = useState('');
 
   useEffect(() => {
     const saved = sessionStorage.getItem(SESSION_KEY);
@@ -34,35 +31,22 @@ function App() {
     }
   };
 
-  const handleLogin = (role: UserRole, phone: string) => {
-    setLoginRole(role);
-    setLoginPhone(phone);
-    setStep('otp_verify');
-  };
-
-  const handleOtpVerified = () => {
-    if (!loginRole) return;
+  const handleLogin = (role: UserRole, phone: string, name: string, uniqueId?: string) => {
     const newUser: CurrentUser = {
-      name: loginRole === 'owner' ? 'Studio Owner' : 'Amit Sharma',
-      role: loginRole,
-      whatsapp: loginPhone,
+      name: role === 'owner' ? name : `Member (${uniqueId})`,
+      role: role,
+      whatsapp: phone,
+      // uniqueId agar type mein support karna ho toh yahan bhi pass kar sakte hain
     };
     setUser(newUser);
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(newUser));
-    setStep(loginRole === 'owner' ? 'owner_dash' : 'member_dash');
+    setStep(role === 'owner' ? 'owner_dash' : 'member_dash');
   };
 
   const handleLogout = () => {
     setUser(null);
     sessionStorage.removeItem(SESSION_KEY);
-  };
-
-  // Helper function to trigger WhatsApp from the logged-in user's number
-  const handleOpenWhatsApp = (customMessage = "Hello, managing team tasks.") => {
-    const phone = user?.whatsapp || loginPhone || "";
-    const cleanPhone = phone.replace(/\D/g, '');
-    const text = encodeURIComponent(customMessage);
-    window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+    setStep('login');
   };
 
   if (step === 'splash') {
@@ -71,10 +55,6 @@ function App() {
 
   if (step === 'login') {
     return <Login onLogin={handleLogin} />;
-  }
-
-  if (step === 'otp_verify' && loginRole) {
-    return <OtpVerify role={loginRole} phone={loginPhone} onVerify={handleOtpVerified} />;
   }
 
   if (step === 'owner_dash' && user) {
