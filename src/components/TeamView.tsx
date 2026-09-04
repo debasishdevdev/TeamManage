@@ -1,210 +1,190 @@
 import { useState } from 'react';
-import { Plus, X, Pencil, Save, Trash2, Phone, Briefcase } from 'lucide-react';
-import type { TeamMember } from '@/types';
+import { Users, Plus, Trash2, CheckCircle2, Clock, Copy, Check } from 'lucide-react';
+import type { CrewData, TeamMember } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 interface TeamViewProps {
-  team: TeamMember[];
-  onAddMember: (member: Omit<TeamMember, 'id' | 'created_at'>) => Promise<void>;
-  onUpdateMember: (id: string, updates: Partial<TeamMember>) => Promise<void>;
-  onDeleteMember: (id: string) => Promise<void>;
+  data: CrewData;
+  onUpdate: () => void;
 }
 
-export function TeamView({ team, onAddMember, onUpdateMember, onDeleteMember }: TeamViewProps) {
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', whatsapp: '', role: '' });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<TeamMember>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
+export function TeamView({ data, onUpdate }: TeamViewProps) {
+  const [name, setName] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [role, setRole] = useState('Photographer');
+  const [loading, setLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Random Unique Team ID Generator
+  const generateTeamId = () => {
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    return `CRW-${randomNum}`;
+  };
+
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return alert('Name is required!');
-    
+    if (!name.trim()) return;
+    setLoading(true);
+
+    const newTeamId = generateTeamId();
+
     try {
-      setIsSubmitting(true);
-      await onAddMember({
-        name: form.name.trim(),
-        whatsapp: form.whatsapp.trim(),
-        role: form.role.trim(),
-        payment_status: 'Pending',
-      });
-      setForm({ name: '', whatsapp: '', role: '' });
-      setShowForm(false);
-    } catch (error: any) {
-      console.error('Error adding team member:', error);
-      alert('Failed to add team member: ' + (error.message || 'Unknown database error'));
+      const { error } = await supabase.from('team').insert([
+        {
+          name: name.trim(),
+          whatsapp: whatsapp.trim(),
+          role: role,
+          team_id: newTeamId, // Unique ID saved to database
+          payment_status: 'Pending',
+        },
+      ]);
+
+      if (error) throw error;
+
+      setName('');
+      setWhatsapp('');
+      onUpdate();
+      alert(`Team member added successfully!\nTeam ID: ${newTeamId}`);
+    } catch (err: any) {
+      alert(err.message || 'Error adding team member');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const startEdit = (m: TeamMember) => {
-    setEditingId(m.id);
-    setEditForm(m);
+  const handleDeleteMember = async (id: string) => {
+    if (!confirm('Are you sure you want to remove this member?')) return;
+    const { error } = await supabase.from('team').delete().eq('id', id);
+    if (!error) onUpdate();
   };
 
-  const saveEdit = async () => {
-    if (!editingId) return;
-    try {
-      setIsUpdating(true);
-      await onUpdateMember(editingId, editForm);
-      setEditingId(null);
-      setEditForm({});
-    } catch (error: any) {
-      console.error('Error updating team member:', error);
-      alert('Failed to update: ' + (error.message || 'Unknown error'));
-    } finally {
-      setIsUpdating(false);
-    }
+  const togglePaymentStatus = async (member: TeamMember) => {
+    const newStatus = member.payment_status === 'Paid' ? 'Pending' : 'Paid';
+    const { error } = await supabase
+      .from('team')
+      .update({ payment_status: newStatus })
+      .eq('id', member.id);
+    if (!error) onUpdate();
   };
 
-  const handleTogglePayment = async (m: TeamMember) => {
-    try {
-      const newStatus = m.payment_status === 'Paid' ? 'Pending' : 'Paid';
-      await onUpdateMember(m.id, { payment_status: newStatus });
-    } catch (error: any) {
-      console.error('Error updating payment status:', error);
-      alert('Failed to update payment status: ' + (error.message || 'Unknown error'));
-    }
+  const copyToClipboard = (teamId: string) => {
+    navigator.clipboard.writeText(teamId);
+    setCopiedId(teamId);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="font-bold text-amber-400 text-sm">Team Members</h3>
-        <button
-          onClick={() => { setShowForm(!showForm); setForm({ name: '', whatsapp: '', role: '' }); }}
-          className="flex items-center gap-1 text-xs bg-amber-500 text-neutral-950 font-bold px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors"
-        >
-          {showForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-          {showForm ? 'Cancel' : 'Add Member'}
-        </button>
-      </div>
-
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-neutral-900 p-4 rounded-2xl border border-neutral-800 space-y-3">
+    <div className="space-y-6 pb-12">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 shadow-xl">
+        <h3 className="text-sm font-bold text-amber-400 mb-3 flex items-center gap-2">
+          <Users className="w-4 h-4" /> Add Team Member
+        </h3>
+        <form onSubmit={handleAddMember} className="space-y-3">
           <div>
-            <label className="text-[10px] text-neutral-400 mb-1 block">Name *</label>
+            <label className="block text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Name</label>
             <input
               type="text"
-              placeholder="Amit Sharma"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-400"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Rahul Sharma"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+              required
             />
           </div>
           <div>
-            <label className="text-[10px] text-neutral-400 mb-1 block">WhatsApp Number</label>
+            <label className="block text-[10px] uppercase tracking-wider text-neutral-400 mb-1">WhatsApp</label>
             <input
-              type="text"
-              placeholder="+91 98765 43210"
-              value={form.whatsapp}
-              onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-400"
+              type="tel"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              placeholder="e.g. 9876543210"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
             />
           </div>
           <div>
-            <label className="text-[10px] text-neutral-400 mb-1 block">Role</label>
-            <input
-              type="text"
-              placeholder="Cinematographer"
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-400"
-            />
+            <label className="block text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            >
+              <option value="Photographer">Photographer</option>
+              <option value="Cinematographer">Cinematographer</option>
+              <option value="Editor">Editor</option>
+              <option value="Drone Pilot">Drone Pilot</option>
+              <option value="Manager">Manager</option>
+            </select>
           </div>
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="w-full bg-amber-500 text-neutral-950 font-bold p-2.5 rounded-lg text-xs hover:bg-amber-600 transition-colors disabled:opacity-50"
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-2 mt-2"
           >
-            {isSubmitting ? 'Adding...' : 'Add Team Member'}
+            <Plus className="w-4 h-4" /> {loading ? 'Adding...' : 'Generate ID & Add Member'}
           </button>
         </form>
-      )}
+      </div>
 
-      {team.length === 0 && !showForm && (
-        <p className="text-[11px] text-neutral-600 bg-neutral-900 p-4 rounded-xl border border-neutral-800 text-center">
-          No team members yet. Click "Add Member" to add one.
-        </p>
-      )}
-
-      {team.map((m) => (
-        <div key={m.id} className="bg-neutral-900 p-3.5 rounded-2xl border border-neutral-800">
-          {editingId === m.id ? (
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={editForm.name || ''}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs"
-              />
-              <input
-                type="text"
-                value={editForm.whatsapp || ''}
-                onChange={(e) => setEditForm({ ...editForm, whatsapp: e.target.value })}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs"
-              />
-              <input
-                type="text"
-                value={editForm.role || ''}
-                onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs"
-              />
-              <div className="flex gap-2">
-                <button 
-                  onClick={saveEdit} 
-                  disabled={isUpdating}
-                  className="bg-emerald-500 text-black px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-1 disabled:opacity-50"
-                >
-                  <Save className="w-3 h-3" /> {isUpdating ? 'Saving...' : 'Save'}
-                </button>
-                <button onClick={() => setEditingId(null)} className="bg-neutral-700 text-white px-3 py-2 rounded-lg text-xs">Cancel</button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-between items-center">
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-white px-1">Team List ({data.team?.length || 0})</h3>
+        {(!data.team || data.team.length === 0) ? (
+          <p className="text-xs text-neutral-500 text-center py-8">No team members added yet.</p>
+        ) : (
+          data.team.map((member) => (
+            <div key={member.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-3.5 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="font-bold text-white text-sm">{m.name}</p>
-                <div className="flex items-center gap-3 text-[10px] text-neutral-500">
-                  {m.role && <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" /> {m.role}</span>}
-                  {m.whatsapp && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {m.whatsapp}</span>}
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-white">{member.name}</h4>
+                  <span className="text-[10px] bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded-md border border-neutral-700">
+                    {member.role}
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-400">{member.whatsapp || 'No WhatsApp'}</p>
+                
+                {/* TEAM ID DISPLAY & COPY BUTTON */}
+                <div className="pt-1 flex items-center gap-2">
+                  <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 font-mono font-bold tracking-wider">
+                    ID: {member.team_id || 'CRW-GENERATE'}
+                  </span>
+                  {member.team_id && (
+                    <button
+                      onClick={() => copyToClipboard(member.team_id)}
+                      className="text-neutral-400 hover:text-white transition-colors p-1"
+                      title="Copy Team ID"
+                    >
+                      {copiedId === member.team_id ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
+
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleTogglePayment(m)}
-                  className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${
-                    m.payment_status === 'Paid'
+                  onClick={() => togglePaymentStatus(member)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+                    member.payment_status === 'Paid'
                       ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                       : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                   }`}
                 >
-                  {m.payment_status === 'Paid' ? 'Paid' : 'Pending'}
-                </button>
-                <button onClick={() => startEdit(m)} className="text-amber-400 bg-amber-500/10 px-2 py-1.5 rounded-lg hover:bg-amber-500/20 transition-colors">
-                  <Pencil className="w-3 h-3" />
+                  {member.payment_status === 'Paid' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                  {member.payment_status || 'Pending'}
                 </button>
                 <button
-                  onClick={async () => {
-                    if (confirm('Remove this team member?')) {
-                      try {
-                        await onDeleteMember(m.id);
-                      } catch (error: any) {
-                        alert('Failed to delete member: ' + (error.message || 'Unknown error'));
-                      }
-                    }
-                  }}
-                  className="text-red-400 bg-red-500/10 px-2 py-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
+                  onClick={() => handleDeleteMember(member.id)}
+                  className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-500/10 transition-colors"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
-          )}
-        </div>
-      ))}
+          ))
+        )}
+      </div>
     </div>
   );
 }
