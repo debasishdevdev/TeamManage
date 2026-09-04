@@ -14,18 +14,29 @@ export function TeamView({ team, onAddMember, onUpdateMember, onDeleteMember }: 
   const [form, setForm] = useState({ name: '', whatsapp: '', role: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<TeamMember>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return alert('Name is required!');
-    await onAddMember({
-      name: form.name.trim(),
-      whatsapp: form.whatsapp.trim(),
-      role: form.role.trim(),
-      payment_status: 'Pending',
-    });
-    setForm({ name: '', whatsapp: '', role: '' });
-    setShowForm(false);
+    
+    try {
+      setIsSubmitting(true);
+      await onAddMember({
+        name: form.name.trim(),
+        whatsapp: form.whatsapp.trim(),
+        role: form.role.trim(),
+        payment_status: 'Pending',
+      });
+      setForm({ name: '', whatsapp: '', role: '' });
+      setShowForm(false);
+    } catch (error: any) {
+      console.error('Error adding team member:', error);
+      alert('Failed to add team member: ' + (error.message || 'Unknown database error'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const startEdit = (m: TeamMember) => {
@@ -35,9 +46,27 @@ export function TeamView({ team, onAddMember, onUpdateMember, onDeleteMember }: 
 
   const saveEdit = async () => {
     if (!editingId) return;
-    await onUpdateMember(editingId, editForm);
-    setEditingId(null);
-    setEditForm({});
+    try {
+      setIsUpdating(true);
+      await onUpdateMember(editingId, editForm);
+      setEditingId(null);
+      setEditForm({});
+    } catch (error: any) {
+      console.error('Error updating team member:', error);
+      alert('Failed to update: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleTogglePayment = async (m: TeamMember) => {
+    try {
+      const newStatus = m.payment_status === 'Paid' ? 'Pending' : 'Paid';
+      await onUpdateMember(m.id, { payment_status: newStatus });
+    } catch (error: any) {
+      console.error('Error updating payment status:', error);
+      alert('Failed to update payment status: ' + (error.message || 'Unknown error'));
+    }
   };
 
   return (
@@ -85,8 +114,12 @@ export function TeamView({ team, onAddMember, onUpdateMember, onDeleteMember }: 
               className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-400"
             />
           </div>
-          <button type="submit" className="w-full bg-amber-500 text-neutral-950 font-bold p-2.5 rounded-lg text-xs hover:bg-amber-600 transition-colors">
-            Add Team Member
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="w-full bg-amber-500 text-neutral-950 font-bold p-2.5 rounded-lg text-xs hover:bg-amber-600 transition-colors disabled:opacity-50"
+          >
+            {isSubmitting ? 'Adding...' : 'Add Team Member'}
           </button>
         </form>
       )}
@@ -120,8 +153,12 @@ export function TeamView({ team, onAddMember, onUpdateMember, onDeleteMember }: 
                 className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-xs"
               />
               <div className="flex gap-2">
-                <button onClick={saveEdit} className="bg-emerald-500 text-black px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-1">
-                  <Save className="w-3 h-3" /> Save
+                <button 
+                  onClick={saveEdit} 
+                  disabled={isUpdating}
+                  className="bg-emerald-500 text-black px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-1 disabled:opacity-50"
+                >
+                  <Save className="w-3 h-3" /> {isUpdating ? 'Saving...' : 'Save'}
                 </button>
                 <button onClick={() => setEditingId(null)} className="bg-neutral-700 text-white px-3 py-2 rounded-lg text-xs">Cancel</button>
               </div>
@@ -137,7 +174,7 @@ export function TeamView({ team, onAddMember, onUpdateMember, onDeleteMember }: 
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => onUpdateMember(m.id, { payment_status: m.payment_status === 'Paid' ? 'Pending' : 'Paid' })}
+                  onClick={() => handleTogglePayment(m)}
                   className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${
                     m.payment_status === 'Paid'
                       ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
@@ -150,7 +187,15 @@ export function TeamView({ team, onAddMember, onUpdateMember, onDeleteMember }: 
                   <Pencil className="w-3 h-3" />
                 </button>
                 <button
-                  onClick={() => { if (confirm('Remove this team member?')) onDeleteMember(m.id); }}
+                  onClick={async () => {
+                    if (confirm('Remove this team member?')) {
+                      try {
+                        await onDeleteMember(m.id);
+                      } catch (error: any) {
+                        alert('Failed to delete member: ' + (error.message || 'Unknown error'));
+                      }
+                    }
+                  }}
                   className="text-red-400 bg-red-500/10 px-2 py-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
                 >
                   <Trash2 className="w-3 h-3" />
