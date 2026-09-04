@@ -14,7 +14,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Random Unique Team ID Generator
+  // Random Unique Team ID Generator (e.g. CRW-4821)
   const generateTeamId = () => {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     return `CRW-${randomNum}`;
@@ -26,7 +26,6 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
     setLoading(true);
 
     const newTeamId = generateTeamId();
-    const ownerEmail = data?.ownerEmail || localStorage.getItem('owner_email') || '';
 
     try {
       const { error } = await supabase.from('team').insert([
@@ -36,7 +35,6 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
           role: role,
           team_id: newTeamId,
           payment_status: 'Pending',
-          owner_email: ownerEmail,
         },
       ]);
 
@@ -137,7 +135,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
         </form>
       </div>
 
-      {/* Team List with Permanent Team ID and Status */}
+      {/* Team List with Count, Member Name, Unique Code, and Status */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white px-1">Team List ({teamList.length})</h3>
         {teamList.length === 0 ? (
@@ -177,18 +175,18 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
                 </div>
               </div>
 
-              {/* PERMANENTLY DISPLAYING TEAM ID & PAYMENT STATUS BELOW */}
+              {/* Unique Code Display & Copy Button */}
               <div className="pt-2 border-t border-neutral-800 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="text-neutral-400">Login ID:</span>
-                  <span className="bg-neutral-950 text-amber-400 font-mono font-bold px-2 py-1 rounded border border-amber-500/30">
+                  <span className="text-neutral-400">Login ID Code:</span>
+                  <span className="bg-neutral-950 text-amber-400 font-mono font-bold px-2.5 py-1 rounded border border-amber-500/30 tracking-wider">
                     {member.team_id || 'CRW-GENERATE'}
                   </span>
                   {member.team_id && (
                     <button
                       onClick={() => copyToClipboard(member.team_id)}
                       className="text-neutral-400 hover:text-white transition-colors p-1 flex items-center gap-1 bg-neutral-800 px-2 py-1 rounded"
-                      title="Copy Team ID"
+                      title="Copy Unique Code"
                     >
                       {copiedId === member.team_id ? (
                         <>
@@ -196,7 +194,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3.5 h-3.5" /> <span className="text-[10px]">Copy</span>
+                          <Copy className="w-3.5 h-3.5" /> <span className="text-[10px]">Copy Code</span>
                         </>
                       )}
                     </button>
@@ -204,7 +202,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
                 </div>
 
                 <span className={`text-[11px] font-medium ${member.payment_status === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  This member has {member.payment_status || 'Pending'} payment
+                  Status: {member.payment_status || 'Pending'}
                 </span>
               </div>
             </div>
