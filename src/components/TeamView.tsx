@@ -21,14 +21,14 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
   };
 
   const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Page refresh hone se rokne ke liye sabse important
     if (!name.trim()) return;
     setLoading(true);
 
     const newTeamId = generateTeamId();
 
     try {
-      const { error } = await supabase.from('team').insert([
+      const { data: insertedData, error } = await supabase.from('team').insert([
         {
           name: name.trim(),
           whatsapp: whatsapp.trim(),
@@ -36,13 +36,19 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
           team_id: newTeamId,
           payment_status: 'Pending',
         },
-      ]);
+      ]).select();
 
       if (error) throw error;
 
+      // Form clear karein
       setName('');
       setWhatsapp('');
-      if (onUpdate) onUpdate();
+      setRole('Photographer');
+
+      // Parent component ka data turant refresh karne ke liye
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (err: any) {
       alert(err.message || 'Error adding team member');
     } finally {
@@ -128,7 +134,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-2 mt-2"
+            className="w-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" /> {loading ? 'Adding...' : 'Add Team Member'}
           </button>
@@ -142,7 +148,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
           <p className="text-xs text-neutral-500 text-center py-8">No team members added yet.</p>
         ) : (
           teamList.map((member: any) => (
-            <div key={member.id || member.name} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3">
+            <div key={member.id || member.team_id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3 shadow-md">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
@@ -201,7 +207,7 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
                   )}
                 </div>
 
-                <span className={`text-[11px] font-medium ${member.payment_status === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${member.payment_status === 'Paid' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
                   Status: {member.payment_status || 'Pending'}
                 </span>
               </div>
