@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { UserRole } from '@/types';
-import { supabase } from '@/lib/supabase'; // Aapka supabase client
+import { supabase } from '@/lib/supabase';
 
 interface LoginProps {
   onLoginSuccess: (user: any) => void;
@@ -9,15 +9,16 @@ interface LoginProps {
 export function Login({ onLoginSuccess }: LoginProps) {
   const [role, setRole] = useState<UserRole>('owner');
   const [email, setEmail] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Step 1: Send OTP to Email
+  // Step 1: Send OTP to Email & save WhatsApp number
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !whatsapp) return;
     setLoading(true);
 
     try {
@@ -27,6 +28,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
           data: {
             role: role,
             name: role === 'owner' ? name : 'Team Member',
+            whatsapp: whatsapp, // WhatsApp number ko auth metadata mein save kar rahe hain
           },
         },
       });
@@ -57,7 +59,6 @@ export function Login({ onLoginSuccess }: LoginProps) {
       if (error) throw error;
 
       if (data.user) {
-        // Supabase user mil gaya, ab database se role aur unique ID fetch karein
         onLoginSuccess(data.user);
       }
     } catch (err: any) {
@@ -98,10 +99,8 @@ export function Login({ onLoginSuccess }: LoginProps) {
           <form onSubmit={handleSendOtp} className="space-y-4">
             {role === 'owner' && (
               <div>
-                <label htmlFor="owner-name-input" className="block text-xs font-medium text-neutral-400 mb-1">Owner Name</label>
+                <label className="block text-xs font-medium text-neutral-400 mb-1">Owner Name</label>
                 <input
-                  id="owner-name-input"
-                  name="ownerName"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -113,14 +112,24 @@ export function Login({ onLoginSuccess }: LoginProps) {
             )}
 
             <div>
-              <label htmlFor="email-input" className="block text-xs font-medium text-neutral-400 mb-1">Email Address</label>
+              <label className="block text-xs font-medium text-neutral-400 mb-1">Email Address (For OTP)</label>
               <input
-                id="email-id-input"
-                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-neutral-400 mb-1">WhatsApp Number</label>
+              <input
+                type="tel"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder="e.g. 9876543210"
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500"
                 required
               />
@@ -137,14 +146,12 @@ export function Login({ onLoginSuccess }: LoginProps) {
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <p className="text-sm text-neutral-400 text-center mb-2">
-              Enter the 6-digit OTP sent to <span className="text-white font-medium">{email}</span>
+              Enter the OTP sent to <span className="text-white font-medium">{email}</span>
             </p>
 
             <div>
-              <label htmlFor="otp-input" className="block text-xs font-medium text-neutral-400 mb-1">Verification OTP</label>
+              <label className="block text-xs font-medium text-neutral-400 mb-1">Verification OTP</label>
               <input
-                id="otp-input"
-                name="otp"
                 type="text"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
@@ -167,7 +174,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
               onClick={() => setStep('request')}
               className="w-full text-xs text-neutral-400 hover:text-white mt-2 text-center block"
             >
-              Change Email / Re-enter
+              Change Details / Re-enter
             </button>
           </form>
         )}
