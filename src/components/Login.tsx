@@ -1,36 +1,70 @@
 import { useState } from 'react';
 import type { UserRole } from '@/types';
+import { supabase } from '@/lib/supabase'; // Aapka supabase client
 
 interface LoginProps {
-  onLogin: (role: UserRole, phone: string, name: string, uniqueId?: string) => void;
+  onLoginSuccess: (user: any) => void;
 }
 
-export function Login({ onLogin }: LoginProps) {
+export function Login({ onLoginSuccess }: LoginProps) {
   const [role, setRole] = useState<UserRole>('owner');
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState<'request' | 'verify'>('request');
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [uniqueId, setUniqueId] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Step 1: Send OTP to Email
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone) return;
+    if (!email) return;
+    setLoading(true);
 
-    if (role === 'owner' && !name) {
-      alert('Please enter your name');
-      return;
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          data: {
+            role: role,
+            name: role === 'owner' ? name : 'Team Member',
+          },
+        },
+      });
+
+      if (error) throw error;
+      alert('OTP has been sent to your email! Please check your inbox.');
+      setStep('verify');
+    } catch (err: any) {
+      alert(err.message || 'Error sending OTP');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (role === 'member' && !uniqueId) {
-      alert('Please enter your Unique ID provided by the owner');
-      return;
+  // Step 2: Verify OTP and Login
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp) return;
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email,
+        token: otp,
+        type: 'email',
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Supabase user mil gaya, ab database se role aur unique ID fetch karein
+        onLoginSuccess(data.user);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Invalid OTP');
+    } finally {
+      setLoading(false);
     }
-
-    onLogin(
-      role, 
-      phone, 
-      role === 'owner' ? name : 'Team Member', 
-      role === 'member' ? uniqueId : undefined
-    );
   };
 
   return (
@@ -60,60 +94,83 @@ export function Login({ onLogin }: LoginProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {role === 'owner' && (
+        {step === 'request' ? (
+          <form onSubmit={handleSendOtp} className="space-y-4">
+            {role === 'owner' && (
+              <div>
+                <label htmlFor="owner-name-input" className="block text-xs font-medium text-neutral-400 mb-1">Owner Name</label>
+                <input
+                  id="owner-name-input"
+                  name="ownerName"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500"
+                  required
+                />
+              </div>
+            )}
+
             <div>
-              <label htmlFor="owner-name" className="block text-xs font-medium text-neutral-400 mb-1">Owner Name</label>
+              <label htmlFor="email-input" className="block text-xs font-medium text-neutral-400 mb-1">Email Address</label>
               <input
-                id="owner-name"
-                name="ownerName"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
+                id="email-id-input"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500"
                 required
               />
             </div>
-          )}
 
-          <div>
-            <label htmlFor="whatsapp-phone" className="block text-xs font-medium text-neutral-400 mb-1">WhatsApp Number</label>
-            <input
-              id="whatsapp-phone"
-              name="whatsappPhone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+91 98765 43210"
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500"
-              required
-            />
-          </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-3 rounded-xl transition-all mt-4"
+            >
+              {loading ? 'Sending OTP...' : 'Send OTP via Email'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <p className="text-sm text-neutral-400 text-center mb-2">
+              Enter the 6-digit OTP sent to <span className="text-white font-medium">{email}</span>
+            </p>
 
-          {role === 'member' && (
             <div>
-              <label htmlFor="unique-id" className="block text-xs font-medium text-neutral-400 mb-1">Unique Member ID</label>
+              <label htmlFor="otp-input" className="block text-xs font-medium text-neutral-400 mb-1">Verification OTP</label>
               <input
-                id="unique-id"
-                name="uniqueId"
+                id="otp-input"
+                name="otp"
                 type="text"
-                value={uniqueId}
-                onChange={(e) => setUniqueId(e.target.value.toUpperCase())}
-                placeholder="e.g. TM-101"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="Enter OTP"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white text-center tracking-widest text-lg focus:outline-none focus:border-yellow-500"
                 required
               />
             </div>
-          )}
 
-          <button
-            type="submit"
-            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-3 rounded-xl transition-all mt-4"
-          >
-            Login to Dashboard
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-3 rounded-xl transition-all mt-4"
+            >
+              {loading ? 'Verifying...' : 'Verify & Login'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStep('request')}
+              className="w-full text-xs text-neutral-400 hover:text-white mt-2 text-center block"
+            >
+              Change Email / Re-enter
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
