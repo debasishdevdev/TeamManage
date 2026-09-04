@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Plus, Trash2, CheckCircle2, Clock, Copy, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -13,6 +13,15 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
   const [role, setRole] = useState('Photographer');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  // Local team list state taaki turant screen update ho
+  const [teamList, setTeamList] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (data?.team) {
+      setTeamList(data.team);
+    }
+  }, [data]);
 
   // Random Unique Team ID Generator (e.g. CRW-4821)
   const generateTeamId = () => {
@@ -21,34 +30,36 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
   };
 
   const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault(); // Page refresh hone se rokne ke liye sabse important
+    e.preventDefault();
     if (!name.trim()) return;
     setLoading(true);
 
     const newTeamId = generateTeamId();
+    const newMemberData = {
+      name: name.trim(),
+      whatsapp: whatsapp.trim(),
+      role: role,
+      team_id: newTeamId,
+      payment_status: 'Pending',
+    };
 
     try {
-      const { data: insertedData, error } = await supabase.from('team').insert([
-        {
-          name: name.trim(),
-          whatsapp: whatsapp.trim(),
-          role: role,
-          team_id: newTeamId,
-          payment_status: 'Pending',
-        },
-      ]).select();
+      const { data: insertedData, error } = await supabase.from('team').insert([newMemberData]).select();
 
       if (error) throw error;
+
+      // Agar database se returned data mile ya local insert karna ho
+      const addedMember = insertedData ? insertedData[0] : { id: Date.now().toString(), ...newMemberData };
+
+      // Turant local list mein add karein taaki zero na dikhe
+      setTeamList((prev) => [addedMember, ...prev]);
 
       // Form clear karein
       setName('');
       setWhatsapp('');
       setRole('Photographer');
 
-      // Parent component ka data turant refresh karne ke liye
-      if (onUpdate) {
-        onUpdate();
-      }
+      if (onUpdate) onUpdate();
     } catch (err: any) {
       alert(err.message || 'Error adding team member');
     } finally {
@@ -58,6 +69,10 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
 
   const handleDeleteMember = async (id: string) => {
     if (!confirm('Are you sure you want to remove this member?')) return;
+    
+    // UI se turant hata dein
+    setTeamList((prev) => prev.filter((m) => m.id !== id));
+
     try {
       const { error } = await supabase.from('team').delete().eq('id', id);
       if (!error && onUpdate) onUpdate();
@@ -68,6 +83,12 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
 
   const togglePaymentStatus = async (member: any) => {
     const newStatus = member.payment_status === 'Paid' ? 'Pending' : 'Paid';
+    
+    // UI mein turant status change karein
+    setTeamList((prev) =>
+      prev.map((m) => (m.id === member.id ? { ...m, payment_status: newStatus } : m))
+    );
+
     try {
       const { error } = await supabase
         .from('team')
@@ -85,8 +106,6 @@ export function TeamView({ data, onUpdate }: TeamViewProps) {
     setCopiedId(teamId);
     setTimeout(() => setCopiedId(null), 2000);
   };
-
-  const teamList = data?.team || [];
 
   return (
     <div className="space-y-6 pb-12 text-white">
