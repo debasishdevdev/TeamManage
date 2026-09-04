@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Team Manage</title>
+    <title>TeamManage</title>
     <script type="text/javascript">
       var segmentCount = 1;
       var l = window.location;
@@ -10,7 +10,7 @@
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
         l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?p=/' +
         l.pathname.slice(1).split('/').slice(segmentCount).join('/') +
-        (l.search ? '&' + l.search.slice(1) : '') +
+        (l.search ? '&q=' + l.search.slice(1) : '') +
         l.hash
       );
     </script>
