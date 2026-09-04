@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TeamManage</string>
+    <string name="title_activity_main">TeamManage</string>
+    <string name="package_name">com.teammanage.app</string>
+    <string name="custom_url_scheme">com.teammanage.app</string>
+</resources>
