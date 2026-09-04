@@ -27,8 +27,11 @@ export function MemberDashboard({ user, onLogout, setStep }: MemberDashboardProp
     );
   }
 
-  const memberName = user.name;
-  const teamMemberInfo = crew.data.team.find((t) => t.name === memberName);
+  const memberName = user?.name || '';
+  // Safe case-insensitive and trimmed matching for team member info
+  const teamMemberInfo = crew.data?.team?.find(
+    (t) => t.name?.trim().toLowerCase() === memberName.trim().toLowerCase()
+  );
   const paymentStatus = teamMemberInfo?.payment_status || 'Pending';
 
   const handleLogout = () => {
@@ -79,9 +82,9 @@ export function MemberDashboard({ user, onLogout, setStep }: MemberDashboardProp
         </div>
 
         <CalendarView
-          bookings={crew.data.bookings}
-          freelancing={crew.data.freelancing}
-          team={crew.data.team}
+          bookings={crew.data?.bookings || []}
+          freelancing={crew.data?.freelancing || []}
+          team={crew.data?.team || []}
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}
           memberName={memberName}
