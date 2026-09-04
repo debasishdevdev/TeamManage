@@ -68,25 +68,30 @@ export function OwnerDashboard({ user, onLogout, setStep }: OwnerDashboardProps)
       <main className="flex-1 overflow-y-auto p-4 pb-24 space-y-4">
         {activeTab === 'calendar' && (
           <CalendarView
-            bookings={crew.data.bookings}
-            freelancing={crew.data.freelancing}
-            team={crew.data.team}
+            bookings={crew.data?.bookings || []}
+            freelancing={crew.data?.freelancing || []}
+            team={crew.data?.team || []}
             currentDate={currentDate}
             setCurrentDate={setCurrentDate}
-            onTogglePayment={(memberId) => {
-              const member = crew.data.team.find((t) => t.id === memberId);
+            onTogglePayment={async (memberId) => {
+              const member = crew.data?.team?.find((t) => t.id === memberId);
               if (member) {
-                crew.updateTeamMember(memberId, {
-                  payment_status: member.payment_status === 'Paid' ? 'Pending' : 'Paid',
-                });
+                try {
+                  await crew.updateTeamMember(memberId, {
+                    payment_status: member.payment_status === 'Paid' ? 'Pending' : 'Paid',
+                  });
+                } catch (error: any) {
+                  console.error('Error updating payment status:', error);
+                  alert('Failed to update status: ' + (error.message || 'Unknown error'));
+                }
               }
             }}
           />
         )}
         {activeTab === 'bookings' && (
           <BookingsManager
-            bookings={crew.data.bookings}
-            team={crew.data.team}
+            bookings={crew.data?.bookings || []}
+            team={crew.data?.team || []}
             onAddBooking={crew.addBooking}
             onUpdateBooking={crew.updateBooking}
             onDeleteBooking={crew.deleteBooking}
@@ -95,19 +100,19 @@ export function OwnerDashboard({ user, onLogout, setStep }: OwnerDashboardProps)
         )}
         {activeTab === 'team' && (
           <TeamView
-            team={crew.data.team}
+            team={crew.data?.team || []}
             onAddMember={crew.addTeamMember}
             onUpdateMember={crew.updateTeamMember}
             onDeleteMember={crew.deleteTeamMember}
           />
         )}
         {activeTab === 'finance' && (
-          <FinanceView bookings={crew.data.bookings} freelancing={crew.data.freelancing} />
+          <FinanceView bookings={crew.data?.bookings || []} freelancing={crew.data?.freelancing || []} />
         )}
         {activeTab === 'freelancing' && (
           <FreelancingView
-            freelancing={crew.data.freelancing}
-            team={crew.data.team}
+            freelancing={crew.data?.freelancing || []}
+            team={crew.data?.team || []}
             onAdd={crew.addFreelance}
             onUpdate={crew.updateFreelance}
             onDelete={crew.deleteFreelance}
