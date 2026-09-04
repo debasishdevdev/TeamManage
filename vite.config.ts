@@ -4,10 +4,10 @@ import { fileURLToPath, URL } from 'node:url';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/TeamManage/',
+  base: './',
   plugins: [react()],
   server: {
-    port: 3000, // Yeh fix karega ki app hamesha localhost:3000 par chale
+    port: 3000,
   },
   resolve: {
     alias: {
