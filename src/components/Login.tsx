@@ -63,8 +63,10 @@ export function Login({ onLogin }: LoginProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {role === 'owner' && (
             <div>
-              <label className="block text-xs font-medium text-neutral-400 mb-1">Owner Name</label>
+              <label htmlFor="owner-name" className="block text-xs font-medium text-neutral-400 mb-1">Owner Name</label>
               <input
+                id="owner-name"
+                name="ownerName"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -76,8 +78,10 @@ export function Login({ onLogin }: LoginProps) {
           )}
 
           <div>
-            <label className="block text-xs font-medium text-neutral-400 mb-1">WhatsApp Number</label>
+            <label htmlFor="whatsapp-phone" className="block text-xs font-medium text-neutral-400 mb-1">WhatsApp Number</label>
             <input
+              id="whatsapp-phone"
+              name="whatsappPhone"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -89,8 +93,10 @@ export function Login({ onLogin }: LoginProps) {
 
           {role === 'member' && (
             <div>
-              <label className="block text-xs font-medium text-neutral-400 mb-1">Unique Member ID</label>
+              <label htmlFor="unique-id" className="block text-xs font-medium text-neutral-400 mb-1">Unique Member ID</label>
               <input
+                id="unique-id"
+                name="uniqueId"
                 type="text"
                 value={uniqueId}
                 onChange={(e) => setUniqueId(e.target.value.toUpperCase())}
